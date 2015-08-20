@@ -89,7 +89,7 @@ func (dlcbf *Dlcbf) getTargets(data []byte) []target {
 
 /*
 Add data to filter return true if insertion was successful,
-return false if data already in filter or size limit was exceeeded
+returns false if data already in filter or size limit was exceeeded
 */
 func (dlcbf *Dlcbf) Add(data []byte) bool {
 	targets := dlcbf.getTargets(data)
@@ -121,7 +121,7 @@ func (dlcbf *Dlcbf) Add(data []byte) bool {
 
 /*
 Delete data to filter return true if deletion was successful,
-return false if data not in filter
+returns false if data not in filter
 */
 func (dlcbf *Dlcbf) Delete(data []byte) bool {
 	deleted := false
@@ -162,7 +162,7 @@ func (dlcbf *Dlcbf) lookup(targets []target) (uint, uint, *target) {
 }
 
 /*
-IsMember return true if data is in filter
+IsMember returns true if data is in filter
 */
 func (dlcbf *Dlcbf) IsMember(data []byte) bool {
 	targets := dlcbf.getTargets(data)
@@ -171,7 +171,7 @@ func (dlcbf *Dlcbf) IsMember(data []byte) bool {
 }
 
 /*
-GetCount return cardinlaity count of current filter
+GetCount returns cardinlaity count of current filter
 */
 func (dlcbf *Dlcbf) GetCount() uint {
 	count := uint(0)
