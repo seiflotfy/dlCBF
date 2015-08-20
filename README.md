@@ -1,4 +1,6 @@
 # dlCBF
+[![GoDoc](https://godoc.org/github.com/seiflotfy/dlCBF?status.svg)](https://godoc.org/github.com/seiflotfy/dlCBF)
+
 A d-left Counting Bloom Filter (dlCBF) is simple hashing-based Counting Bloom Filter (CBF) alternative based on d-left hashing that offers the same functionality as a CBF, but uses less space, generally saving a factor of two or more.
 
 For details about the algorithm and citations please use this article for now
