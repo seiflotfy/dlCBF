@@ -2,10 +2,9 @@ package dlcbf
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"hash/fnv"
 	"math"
-	"math/rand"
 )
 
 const bucketHeight = 8
@@ -37,6 +36,11 @@ type Dlcbf struct {
 NewDlcbf returns a newly created Dlcbf
 */
 func NewDlcbf(numTables uint, numBuckets uint) (*Dlcbf, error) {
+
+	if numBuckets < numTables {
+		return nil, errors.New("numBuckets has to be greater than numTables")
+	}
+
 	dlcbf := &Dlcbf{
 		numTables:  numTables,
 		numBuckets: numBuckets,
@@ -50,16 +54,33 @@ func NewDlcbf(numTables uint, numBuckets uint) (*Dlcbf, error) {
 	return dlcbf, nil
 }
 
+/*
+NewDlcbfForCapacity returns a newly created Dlcbf for a given max Capacity
+*/
+func NewDlcbfForCapacity(capacity uint) (*Dlcbf, error) {
+	t := capacity / (4096 * bucketHeight)
+	return NewDlcbf(t, 4096)
+}
+
 func (dlcbf *Dlcbf) getTargets(data []byte) []target {
 	hasher := fnv.New64a()
 	hasher.Write(data)
 	fp := hasher.Sum(nil)
-	rand.Seed(int64(hasher.Sum64()))
-	perm := rand.Perm(int(dlcbf.numTables))
+	hsum := hasher.Sum64()
+
+	h1 := uint32(hsum & 0xffffffff)
+	h2 := uint32((hsum >> 32) & 0xffffffff)
+
+	indices := make([]uint, dlcbf.numTables, dlcbf.numTables)
+	for i := uint(0); i < dlcbf.numTables; i++ {
+		saltedHash := uint((h1 + uint32(i)*h2))
+		indices[i] = (saltedHash % dlcbf.numBuckets)
+	}
+
 	targets := make([]target, dlcbf.numTables, dlcbf.numTables)
 	for i := uint(0); i < dlcbf.numTables; i++ {
 		targets[i] = target{
-			bucketIndex: uint(perm[i]),
+			bucketIndex: uint(indices[i]),
 			fingerprint: fingerprint(binary.LittleEndian.Uint16(fp)),
 		}
 	}
@@ -82,9 +103,6 @@ func (dlcbf *Dlcbf) Add(data []byte) bool {
 	tableI := uint(0)
 
 	for i, target := range targets {
-		if i == 0 && target.bucketIndex == 605 {
-			fmt.Println(dlcbf.tables[i][target.bucketIndex])
-		}
 		tmpCount := dlcbf.tables[i][target.bucketIndex].count
 		if tmpCount < minCount && tmpCount < bucketHeight {
 			minCount = dlcbf.tables[i][target.bucketIndex].count
@@ -106,6 +124,7 @@ Delete data to filter return true if deletion was successful,
 return false if data not in filter
 */
 func (dlcbf *Dlcbf) Delete(data []byte) bool {
+	deleted := false
 	targets := dlcbf.getTargets(data)
 	for i, target := range targets {
 		for j, fp := range dlcbf.tables[i][target.bucketIndex].entries {
@@ -124,11 +143,11 @@ func (dlcbf *Dlcbf) Delete(data []byte) bool {
 				}
 				lastindex := dlcbf.tables[i][target.bucketIndex].count
 				dlcbf.tables[i][target.bucketIndex].entries[lastindex] = 0
-				return true
+				deleted = true
 			}
 		}
 	}
-	return false
+	return deleted
 }
 
 func (dlcbf *Dlcbf) lookup(targets []target) (uint, uint, *target) {
